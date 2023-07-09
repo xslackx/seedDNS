@@ -45,7 +45,8 @@ def clsFile(fn, nn):
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True) as numbers:
         numbers.stdout.read()
     
-    return nn
+    if motd.returncode == 0 and numbers.returncode == 0:
+        return nn
 
 async def pumpDig(fn, dns, mode, type):
     with open(fn, "r") as sites:
@@ -69,7 +70,7 @@ async def pumpDig(fn, dns, mode, type):
 #TopFileName = "alexatop1m.txt"
 #FileCleanJunks = clsFile(dnsTopFileName, TopFileName)
 #dnsServer = "172.17.0.2"
-#queryType = ['ANY', 'MX', 'NS', 'AAAA', 'A', 'DNSKEY', 'DS']
+#queryType = ['ANY', 'MX', 'NS', 'AAAA', 'A', 'DNSKEY', 'DS', 'SRV']
 #print("DigPump\n")
 #mode 0 = async very fast 
 #mode 1 = for slow
