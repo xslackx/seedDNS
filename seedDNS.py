@@ -69,7 +69,7 @@ async def pumpDig(fn, dns, mode, type):
 #TopFileName = "alexatop1m.txt"
 #FileCleanJunks = clsFile(dnsTopFileName, TopFileName)
 #dnsServer = "172.17.0.2"
-#queryType = ['ANY', 'MX', 'NS', 'AAAA', 'A']
+#queryType = ['ANY', 'MX', 'NS', 'AAAA', 'A', 'DNSKEY', 'DS']
 #print("DigPump\n")
 #mode 0 = async very fast 
 #mode 1 = for slow
