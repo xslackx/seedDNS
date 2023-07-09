@@ -13,19 +13,21 @@ def getTop1m():
         "deprecated": "old." + topAlexa["deprecated"].split("/")[-1]
     }
 
-    with open(fZip["new"], "wb+") as topCsv:
-        print("Getting the content... \n")
-        zip = requests.get(topAlexa["new"], timeout=300, allow_redirects=True)
-        print("Saving data response.\n")
-        topCsv.write(zip.content)
-        topCsv.close()    
-        print("File: " + fZip["new"] + ", Download: OK\n")
+    if not os.access(fZip["new"], os.R_OK):
+        with open(fZip["new"], "wb+") as topCsv:
+            print("Getting the content... \n")
+            zip = requests.get(topAlexa["new"], timeout=300, allow_redirects=True)
+            print("Saving data response.\n")
+            topCsv.write(zip.content)
+            topCsv.close()    
+            print("File: " + fZip["new"] + ", Download: OK\n")
+    else:
+        print(f"Found {fZip['new']} file\n")
 
     with zipfile.ZipFile(fZip["new"], "r") as zip:
+        print("Zip content\n")
         zip.printdir()
-        print("\n")
         zip.extractall()
-        print("\n")
     zipname = zip.namelist()[0]
 
     return zipname
@@ -45,7 +47,7 @@ def clsFile(fn, nn):
     
     return nn
 
-async def pumpDig(fn, dns, mode):
+async def pumpDig(fn, dns, mode, type):
     with open(fn, "r") as sites:
         let=sites.read()
     lista = let.split("\n")
@@ -53,7 +55,7 @@ async def pumpDig(fn, dns, mode):
     del let
 
     for i in range(0, limit):
-        cmd=f"dig @{dns} {lista[i]}"
+        cmd=f"dig @{dns} {lista[i]} {type}"
         if mode == 0:
             await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE)
         elif mode == 1:
@@ -67,7 +69,8 @@ async def pumpDig(fn, dns, mode):
 #TopFileName = "alexatop1m.txt"
 #FileCleanJunks = clsFile(dnsTopFileName, TopFileName)
 #dnsServer = "172.17.0.2"
+#queryType = ['ANY', 'MX', 'NS', 'AAAA', 'A']
 #print("DigPump\n")
 #mode 0 = async very fast 
 #mode 1 = for slow
-#asyncio.run(pumpDig(FileCleanJunks, dnsServer, 0))
+#asyncio.run(pumpDig(FileCleanJunks, dnsServer, 1, queryType[0]))
