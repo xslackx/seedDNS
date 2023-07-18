@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import requests, zipfile, asyncio, os, subprocess
+import requests, zipfile, asyncio, os, subprocess, socket
 
 
 def getTop1m():
@@ -48,20 +48,37 @@ def clsFile(fn, nn):
     if motd.returncode == 0 and numbers.returncode == 0:
         return nn
 
-async def pumpDig(fn, dns, mode, type):
+async def pumpDig(fn, dns, mode, type, engine):
+    
     with open(fn, "r") as sites:
         let=sites.read()
     lista = let.split("\n")
     limit = len(lista) - 1
     del let
 
-    for i in range(0, limit):
-        cmd=f"dig @{dns} {lista[i]} {type}"
-        if mode == 0:
-            await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE)
-        elif mode == 1:
-            with subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True) as dig:
-                dig.stdout.read()
+    if engine == "dig":
+        for i in range(0, limit):
+            cmd=f"dig @{dns} {lista[i]} {type}"
+            if mode == 0:
+                await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE)
+            elif mode == 1:
+                with subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True) as dig:
+                    dig.stdout.read()
+    elif engine == "sock":
+        async def sk(h):
+            socket.gethostbyname(h)
+
+        del type
+        tk = [] 
+        for i in range(0, limit):
+            if mode == 0:
+                tk.append(asyncio.create_task(f'sk("{lista[i]}")'))
+                #asyncio.create_task(sk(lista[i]))
+            if mode == 1:
+                socket.gethostbyname(f"{lista[i]}")
+
+        if len(tk) > 1:
+            asyncio.create_task(tk)
 
     
 
@@ -74,4 +91,6 @@ async def pumpDig(fn, dns, mode, type):
 #print("DigPump\n")
 #mode 0 = async very fast 
 #mode 1 = for slow
-#asyncio.run(pumpDig(FileCleanJunks, dnsServer, 1, queryType[0]))
+# In engine define which tool use, dig or internal library, 
+# internal library support only simple A query
+#asyncio.run(pumpDig(FileCleanJunks, dnsServer, 0, queryType[0], "sock"))
