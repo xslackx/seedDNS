@@ -1,0 +1,13 @@
+bin
+lib
+lib64
+.env
+__pycache__
+pyvenv.cfg
+majestic_million.csv
+top-1m.csv
+top-1m.csv.zip
+tops_compiled.txt
+tops.kgb
+seedDNS_old.py
+seed.py

@@ -1,96 +1,83 @@
-#!/usr/bin/env python3
-import requests, zipfile, asyncio, os, subprocess, socket
+#!bin/env python3
+from seedDNSabc import seedDNS as abcseed
+from zipfile import ZipFile as zp
+from os import access, R_OK, listdir
+from requests import get
+from subprocess import Popen, PIPE
+from csv import reader
+from time import sleep
+from random import randint
+from asyncio import create_subprocess_shell
 
+class seedDNS(abcseed):
+    def __init__(self) -> None:
+        self.tops_1m: list = [
+            "http://s3-us-west-1.amazonaws.com/umbrella-static/top-1m.csv.zip",
+            "http://downloads.majestic.com/majestic_million.csv"
+        ]
+        self.tops_hist_dir: dict = {"type": str, "location": str}
+        super().__init__()
+        
+    def top1m(self):
+        for self.fp_url in self.tops_1m:
+            self.fp_name = self.fp_url.split('/')[-1]
+            self.type = None            
+            if not access(self.fp_name, R_OK):
+                with open(self.fp_name, "wb+") as self.zip:
+                    self.blob = get(self.fp_url, timeout=300, allow_redirects=True)
+                    self.zip.write(self.blob.content)
+                    self.zip.close()
+                with Popen(f'file {self.fp_name}', stdout=PIPE, shell=True) as self.typefile:
+                    self.type = self.typefile.stdout.read().decode()
+                    if self.type.split()[1] == 'Zip':     
+                        with zp(self.fp_name, "r") as csv:
+                            csv.extractall()
+        
+    def fmtfile(self):
+        self.top_list = []
+        for self.has_csv_file in listdir():
+            self.index = None
+            try:
+                if self.has_csv_file.split('.')[1] == 'csv' and self.has_csv_file.split('.')[-1] == 'csv':
+                    with open(self.has_csv_file, newline='') as self.csv_file:
+                        self.csv = reader(self.csv_file, delimiter=',')
+                        if self.has_csv_file.split('.')[0] == 'majestic_million':
+                            self.index = 2
+                        else: 
+                            self.index = 1
+                        for self.row in self.csv:
+                            self.top_list.append(self.row[self.index])
+            except:
+                pass
+            
+        if len(self.top_list) > 10:
+            self.tops = list(set(self.top_list))
+            with open('data/tops_compiled.txt', 'w') as self.local_save:
+                for self.item in self.tops:
+                    self.local_save.write(self.item+"\n")
+                
+    async def consult(self, dns, mode, type_msg):
+        with open('data/tops_compiled.txt', 'r') as self.sites:
+            self.items = self.sites.read()
+        self.items = self.items.split('\n')
+        self.items_len = len(self.items)
+        
+        if not dns:
+            self.dns = '127.0.0.1'
+        else:
+            self.dns = dns
+        
+        if not type_msg:
+            self.type_msg = 'ANY'
+        else:
+            self.type_msg = type_msg
 
-def getTop1m():
-    topAlexa = {
-        "new": "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip",
-        "deprecated": "https://s3.amazonaws.com/alexa-static/top-1m.csv.zip"
-    }
-
-    fZip = {
-        "new": topAlexa["new"].split("/")[-1], 
-        "deprecated": "old." + topAlexa["deprecated"].split("/")[-1]
-    }
-
-    if not os.access(fZip["new"], os.R_OK):
-        with open(fZip["new"], "wb+") as topCsv:
-            print("Getting the content... \n")
-            zip = requests.get(topAlexa["new"], timeout=300, allow_redirects=True)
-            print("Saving data response.\n")
-            topCsv.write(zip.content)
-            topCsv.close()    
-            print("File: " + fZip["new"] + ", Download: OK\n")
-    else:
-        print(f"Found {fZip['new']} file\n")
-
-    with zipfile.ZipFile(fZip["new"], "r") as zip:
-        print("Zip content\n")
-        zip.printdir()
-        zip.extractall()
-    zipname = zip.namelist()[0]
-
-    return zipname
-
-def clsFile(fn, nn):
-    print("Renaming file to: " + nn + "\n")
-    os.rename(fn, nn)
-    cmd = f"sed -i '1,8d' {nn}"
-    print("Remove MOTD\n")
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True) as motd:
-        motd.stdout.read()
-
-    cmd = "sed -i 's/^[0-9]\{1,\},//g' " + f"{nn}"
-    print("Remove index numbers\n")
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True) as numbers:
-        numbers.stdout.read()
-    
-    if motd.returncode == 0 and numbers.returncode == 0:
-        return nn
-
-async def pumpDig(fn, dns, mode, type, engine):
-    
-    with open(fn, "r") as sites:
-        let=sites.read()
-    lista = let.split("\n")
-    limit = len(lista) - 1
-    del let
-
-    if engine == "dig":
-        for i in range(0, limit):
-            cmd=f"dig @{dns} {lista[i]} {type}"
+        for self.index in range(0, self.items_len):
+            cmd=f"dig @{self.dns} {self.items[self.index]} {self.type_msg}"
             if mode == 0:
-                await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE)
+                await create_subprocess_shell(cmd, stdout=PIPE, shell=True)
+                sleep(randint(0,10))
             elif mode == 1:
-                with subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True) as dig:
-                    dig.stdout.read()
-    elif engine == "sock":
-        async def sk(h):
-            socket.gethostbyname(h)
-
-        del type
-        tk = [] 
-        for i in range(0, limit):
-            if mode == 0:
-                tk.append(asyncio.create_task(f'sk("{lista[i]}")'))
-                #asyncio.create_task(sk(lista[i]))
-            if mode == 1:
-                socket.gethostbyname(f"{lista[i]}")
-
-        if len(tk) > 1:
-            asyncio.create_task(tk)
-
-    
-
-# Example usage
-#dnsTopFileName = getTop1m()
-#TopFileName = "alexatop1m.txt"
-#FileCleanJunks = clsFile(dnsTopFileName, TopFileName)
-#dnsServer = "172.17.0.2"
-#queryType = ['ANY', 'MX', 'NS', 'AAAA', 'A', 'DNSKEY', 'DS', 'SRV']
-#print("DigPump\n")
-#mode 0 = async very fast 
-#mode 1 = for slow
-# In engine define which tool use, dig or internal library, 
-# internal library support only simple A query
-#asyncio.run(pumpDig(FileCleanJunks, dnsServer, 0, queryType[0], "sock"))
+                with Popen(cmd, stdout=PIPE, shell=True) as dig_cmd:
+                    dig_cmd.stdout.read()
+                sleep(randint(0,10))
