@@ -7,6 +7,11 @@ As I wanted to explore the study tools a little more and needed some load, I wro
 
 Feeding the DNS cache.
 
+In the previous version the csv data was from Alexa Ranking but until now 
+the service is not running anymore.
+
+Now seedDNS is using two sources from Cisco Umbrella and Majestic 
+
 ## what you need?
 python3.6+, dig
 
